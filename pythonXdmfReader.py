@@ -1,0 +1,204 @@
+##
+# @file
+# This file is part of SeisSol.
+#
+# @author Thomas Ulrich  
+#
+# @section LICENSE
+# Copyright (c) 2016, SeisSol Group
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# @section DESCRIPTION
+#
+
+#Author: Thomas Ulrich
+#Date: 12.10.17
+#aim: 
+# python reader for SeisSol xdmf output (posix or hdf5)
+
+
+import numpy as np
+import h5py
+import os
+import lxml.etree as ET
+
+def ReadGeometry(xdmfFilename):
+   tree = ET.parse(xdmfFilename)
+   root = tree.getroot()
+   path = os.path.dirname(xdmfFilename) + '/'
+   for Property in root.findall('.//Geometry'):
+      nPoints = int(Property.get("NumberOfElements"))
+      break
+   for Property in root.findall('.//Geometry/DataItem'):
+      dataLocation = Property.text
+      geom_prec = int(Property.get("Precision"))
+      break
+   splitArgs = dataLocation.split(':')
+   if len(splitArgs)==2:
+      filename, hdf5var = splitArgs
+      h5f = h5py.File(path + filename,'r')
+      xyz = h5f[hdf5var][:,:]
+      h5f.close()
+   else:
+      filename = dataLocation
+      fid = open(path + filename,'r')
+      if geom_prec==4:
+         xyz = np.fromfile(fid, dtype=np.dtype('<f'),count=nPoints*3)
+      else:
+         xyz = np.fromfile(fid, dtype=np.dtype('d'),count=nPoints*3)
+      fid.close()
+      xyz = xyz.reshape((nPoints,3))
+   return xyz
+
+def ReadConnect(xdmfFilename):
+   tree = ET.parse(xdmfFilename)
+   root = tree.getroot()
+   path = os.path.dirname(xdmfFilename) + '/'
+   for Property in root.findall('.//Topology'):
+      nElements = int(Property.get("NumberOfElements"))
+   for Property in root.findall('.//Topology/DataItem'):
+      dataLocation = Property.text
+      connect_prec = int(Property.get("Precision"))
+      break
+   splitArgs = dataLocation.split(':')
+   if len(splitArgs)==2:
+      filename, hdf5var = splitArgs
+      h5f = h5py.File(path + filename,'r')
+      connect = h5f[hdf5var][:,:]
+      h5f.close()
+   else:
+      filename = dataLocation
+      fid = open(path + filename,'r')
+      if connect_prec==4:
+         connect = np.fromfile(fid, dtype=np.dtype('i4'),count=nElements*3)
+      else:
+         connect = np.fromfile(fid, dtype=np.dtype('i8'),count=nElements*3)
+      fid.close()
+      connect = connect.reshape((nElements,3))
+   return connect
+
+def GetDataLocationAndPrecision(xdmfFilename, dataName):
+   tree = ET.parse(xdmfFilename)
+   root = tree.getroot()
+   for Property in root.findall('.//Attribute'):
+      if Property.get("Name")==dataName:
+         for prop in Property.findall('.//DataItem'):
+            if prop.get("Format") in ['HDF','Binary']:
+               dataLocation = prop.text
+               data_prec = int(prop.get("Precision"))
+               dims = prop.get("Dimensions").split()
+               if len(dims)==1:
+                  MemDimension = int(prop.get("Dimensions").split()[0])
+               else:
+                  MemDimension = int(prop.get("Dimensions").split()[1])
+               return [dataLocation,data_prec,MemDimension]
+   raise NameError('%s not found in dataset' %(dataName))
+
+def ReadNdt(xdmfFilename):
+   tree = ET.parse(xdmfFilename)
+   root = tree.getroot()
+   ndt = 0
+   for Property in root.findall('.//Grid'):
+      if Property.get("GridType")=="Uniform":
+         ndt=ndt+1
+   if ndt==0:
+      raise NameError('ndt=0,( not GridType=Uniform found in xdmf)')
+   else:
+      return ndt
+
+def ReadTimeStep(xdmfFilename):
+   #reading the time step in the xdmf file
+   tree = ET.parse(xdmfFilename)
+   root = tree.getroot()
+   i=0
+   for Property in root.findall('Domain/Grid/Grid/Time'):
+      if i==0:
+         dt=float(Property.get("Value"))
+         i=1
+      else:
+         dt=float(Property.get("Value"))-dt
+         return dt
+   raise NameError('time step could not be determined')
+
+
+def ReadPartition(xdmfFilename, nElements):
+   path = os.path.dirname(xdmfFilename) + '/'
+   dataLocation,data_prec,MemDimension = GetDataLocationAndPrecision(xdmfFilename, 'partition')
+   splitArgs = dataLocation.split(':')
+   if len(splitArgs)==2:
+      filename, hdf5var = splitArgs
+      h5f = h5py.File(path + filename,'r')
+      partition = h5f[hdf5var][:]
+      h5f.close()
+   else:
+      filename = dataLocation
+      if data_prec == 4:
+          data_type = np.dtype('i4')
+      else:
+          data_type = np.dtype('i8')
+
+      fid = open(path + filename,'r')
+      partition = np.fromfile(fid, dtype=data_type, count=nElements)
+      fid.close()
+   return partition
+
+def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
+   path = os.path.dirname(xdmfFilename) + '/'
+   dataLocation,data_prec,MemDimension = GetDataLocationAndPrecision(xdmfFilename, dataName)
+   splitArgs = dataLocation.split(':')
+   if len(splitArgs)==2:
+      filename, hdf5var = splitArgs
+      h5f = h5py.File(path + filename,'r')
+      if not oneDtMem:
+         myData = h5f[hdf5var][:,:]
+      else:
+         myData = h5f[hdf5var][idt,:]
+      h5f.close()
+   else:
+      filename = dataLocation
+      if data_prec == 4:
+          data_type = np.dtype('<f')
+      else:
+          data_type = np.dtype('d')
+
+      fid = open(path + filename,'r')
+      if not oneDtMem:
+         myData = np.fromfile(fid, dtype=data_type)
+         ndt = np.shape(myData)[0]/MemDimension
+         myData = myData.reshape((ndt, MemDimension))
+         myData = myData[:,0:nElements]
+      else:
+         fid.seek(idt*MemDimension*data_prec, os.SEEK_SET)
+         myData = np.fromfile(fid, dtype=data_type, count=nElements)
+         print myData
+         print np.amax(myData)
+      fid.close()
+   return [myData,data_prec]
+
+
