@@ -147,25 +147,35 @@ def ReadTimeStep(xdmfFilename):
    raise NameError('time step could not be determined')
 
 
-def ReadPartition(xdmfFilename, nElements):
+
+def Read1dData(xdmfFilename, dataName, nElements, isInt=False):
    path = os.path.dirname(xdmfFilename) + '/'
-   dataLocation,data_prec,MemDimension = GetDataLocationAndPrecision(xdmfFilename, 'partition')
+   dataLocation,data_prec,MemDimension = GetDataLocationAndPrecision(xdmfFilename, dataName)
    splitArgs = dataLocation.split(':')
    if len(splitArgs)==2:
       filename, hdf5var = splitArgs
       h5f = h5py.File(path + filename,'r')
-      partition = h5f[hdf5var][:]
+      myData = h5f[hdf5var][:]
       h5f.close()
    else:
       filename = dataLocation
       if data_prec == 4:
-          data_type = np.dtype('i4')
+          if isInt:
+             data_type = np.dtype('i4')
+          else:
+             data_type = np.dtype('<f')
       else:
-          data_type = np.dtype('i8')
-
+          if isInt:
+             data_type = np.dtype('i8')
+          else:
+             data_type = np.dtype('d')
       fid = open(path + filename,'r')
-      partition = np.fromfile(fid, dtype=data_type, count=nElements)
+      myData = np.fromfile(fid, dtype=data_type, count=nElements)
       fid.close()
+   return [myData,data_prec]
+
+def ReadPartition(xdmfFilename, nElements):
+   partition, partition_prec = Read1dData(xdmfFilename, 'partition', nElements, isInt=True)
    return partition
 
 def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
