@@ -214,8 +214,6 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
       else:
          fid.seek(idt*MemDimension*data_prec, os.SEEK_SET)
          myData = np.fromfile(fid, dtype=data_type, count=nElements)
-         print myData
-         print np.amax(myData)
       fid.close()
    return [myData,data_prec]
 
