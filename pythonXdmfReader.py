@@ -51,7 +51,9 @@ import lxml.etree as ET
 def ReadGeometry(xdmfFilename):
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
-   path = os.path.dirname(xdmfFilename) + '/'
+   path = os.path.dirname(xdmfFilename) 
+   if path != '':
+      path = path + '/'
    for Property in root.findall('.//Geometry'):
       nPoints = int(Property.get("NumberOfElements"))
       break
@@ -79,7 +81,9 @@ def ReadGeometry(xdmfFilename):
 def ReadConnect(xdmfFilename):
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
-   path = os.path.dirname(xdmfFilename) + '/'
+   path = os.path.dirname(xdmfFilename) 
+   if path != '':
+      path = path + '/'
    for Property in root.findall('.//Topology'):
       nElements = int(Property.get("NumberOfElements"))
    for Property in root.findall('.//Topology/DataItem'):
@@ -149,7 +153,9 @@ def ReadTimeStep(xdmfFilename):
 
 
 def Read1dData(xdmfFilename, dataName, nElements, isInt=False):
-   path = os.path.dirname(xdmfFilename) + '/'
+   path = os.path.dirname(xdmfFilename) 
+   if path != '':
+      path = path + '/'
    dataLocation,data_prec,MemDimension = GetDataLocationAndPrecision(xdmfFilename, dataName)
    splitArgs = dataLocation.split(':')
    if len(splitArgs)==2:
@@ -179,7 +185,9 @@ def ReadPartition(xdmfFilename, nElements):
    return partition
 
 def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
-   path = os.path.dirname(xdmfFilename) + '/'
+   path = os.path.dirname(xdmfFilename) 
+   if path != '':
+      path = path + '/'
    dataLocation,data_prec,MemDimension = GetDataLocationAndPrecision(xdmfFilename, dataName)
    splitArgs = dataLocation.split(':')
    if len(splitArgs)==2:
