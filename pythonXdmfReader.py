@@ -89,6 +89,8 @@ def ReadConnect(xdmfFilename):
    for Property in root.findall('.//Topology/DataItem'):
       dataLocation = Property.text
       connect_prec = int(Property.get("Precision"))
+      #3 for surface, 4 for volume
+      dim2 = int(Property.get("Dimensions").split()[1])
       break
    splitArgs = dataLocation.split(':')
    if len(splitArgs)==2:
@@ -100,11 +102,11 @@ def ReadConnect(xdmfFilename):
       filename = dataLocation
       fid = open(path + filename,'r')
       if connect_prec==4:
-         connect = np.fromfile(fid, dtype=np.dtype('i4'),count=nElements*3)
+         connect = np.fromfile(fid, dtype=np.dtype('i4'),count=nElements*dim2)
       else:
-         connect = np.fromfile(fid, dtype=np.dtype('i8'),count=nElements*3)
+         connect = np.fromfile(fid, dtype=np.dtype('i8'),count=nElements*dim2)
       fid.close()
-      connect = connect.reshape((nElements,3))
+      connect = connect.reshape((nElements,dim2))
    return connect
 
 def GetDataLocationAndPrecision(xdmfFilename, dataName):
