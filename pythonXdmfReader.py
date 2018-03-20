@@ -138,6 +138,13 @@ def ReadNdt(xdmfFilename):
    else:
       return ndt
 
+def ReadNElements(xdmfFilename):
+   tree = ET.parse(xdmfFilename)
+   root = tree.getroot()
+   for Property in root.findall('Domain/Grid/Grid/Topology'):
+      return int(Property.get("NumberOfElements"))
+   raise NameError('nElements could not be determined')
+
 def ReadTimeStep(xdmfFilename):
    #reading the time step in the xdmf file
    tree = ET.parse(xdmfFilename)
@@ -186,7 +193,8 @@ def ReadPartition(xdmfFilename, nElements):
    partition, partition_prec = Read1dData(xdmfFilename, 'partition', nElements, isInt=True)
    return partition
 
-def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
+def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElement=0):
+   lastElement=firstElement+nElements
    path = os.path.dirname(xdmfFilename) 
    if path != '':
       path = path + '/'
@@ -196,9 +204,9 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
       filename, hdf5var = splitArgs
       h5f = h5py.File(path + filename,'r')
       if not oneDtMem:
-         myData = h5f[hdf5var][:,:]
+         myData = h5f[hdf5var][:,firstElement:lastElement]
       else:
-         myData = h5f[hdf5var][idt,:]
+         myData = h5f[hdf5var][idt,firstElement:lastElement]
       h5f.close()
    else:
       filename = dataLocation
@@ -212,11 +220,9 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False):
          myData = np.fromfile(fid, dtype=data_type)
          ndt = np.shape(myData)[0]/MemDimension
          myData = myData.reshape((ndt, MemDimension))
-         myData = myData[:,0:nElements]
+         myData = myData[:,firstElement:lastElement]
       else:
-         fid.seek(idt*MemDimension*data_prec, os.SEEK_SET)
+         fid.seek(idt*MemDimension*data_prec + firstElement*data_prec, os.SEEK_SET)
          myData = np.fromfile(fid, dtype=data_type, count=nElements)
       fid.close()
    return [myData,data_prec]
-
-
