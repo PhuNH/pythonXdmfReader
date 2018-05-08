@@ -193,7 +193,15 @@ def ReadPartition(xdmfFilename, nElements):
    partition, partition_prec = Read1dData(xdmfFilename, 'partition', nElements, isInt=True)
    return partition
 
-def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElement=0):
+def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElement=-1):
+
+   if firstElement==-1:
+      firstElement=0
+      partialLoading=False
+   else:
+      #read only a slice of the array (memory consumption)
+      partialLoading=True
+
    lastElement=firstElement+nElements
    path = os.path.dirname(xdmfFilename) 
    if path != '':
@@ -217,7 +225,7 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElem
 
       fid = open(path + filename,'r')
       if not oneDtMem:
-         if firstElement==0:
+         if not partialLoading:
            myData = np.fromfile(fid, dtype=data_type)
            ndt = np.shape(myData)[0]/MemDimension
            myData = myData.reshape((ndt, MemDimension))
