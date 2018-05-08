@@ -233,8 +233,8 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElem
          else:
            #read time step by time step to not stress the memory consumption
            ndt = ReadNdt(xdmfFilename)
+           myData=np.zeros((ndt,nElements))
            for idt in range(0,ndt):
-              myData=np.zeros((ndt,nElements))
               fid.seek(idt*MemDimension*data_prec + firstElement*data_prec, os.SEEK_SET)
               myData[idt,:] = np.fromfile(fid, dtype=data_type, count=nElements)
       else:
