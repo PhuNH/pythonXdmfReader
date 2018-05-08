@@ -217,10 +217,18 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElem
 
       fid = open(path + filename,'r')
       if not oneDtMem:
-         myData = np.fromfile(fid, dtype=data_type)
-         ndt = np.shape(myData)[0]/MemDimension
-         myData = myData.reshape((ndt, MemDimension))
-         myData = myData[:,firstElement:lastElement]
+         if firstElement==0:
+           myData = np.fromfile(fid, dtype=data_type)
+           ndt = np.shape(myData)[0]/MemDimension
+           myData = myData.reshape((ndt, MemDimension))
+           myData = myData[:,firstElement:lastElement]
+         else:
+           #read time step by time step to not stress the memory consumption
+           ndt = ReadNdt(xdmfFilename)
+           for idt in range(0,ndt):
+              myData=np.zeros((ndt,nElements))
+              fid.seek(idt*MemDimension*data_prec + firstElement*data_prec, os.SEEK_SET)
+              myData[idt,:] = np.fromfile(fid, dtype=data_type, count=nElements)
       else:
          fid.seek(idt*MemDimension*data_prec + firstElement*data_prec, os.SEEK_SET)
          myData = np.fromfile(fid, dtype=data_type, count=nElements)
