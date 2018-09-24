@@ -86,6 +86,7 @@ def ReadConnect(xdmfFilename):
       path = path + '/'
    for Property in root.findall('.//Topology'):
       nElements = int(Property.get("NumberOfElements"))
+      break
    for Property in root.findall('.//Topology/DataItem'):
       dataLocation = Property.text
       connect_prec = int(Property.get("Precision"))
@@ -214,7 +215,10 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElem
       if not oneDtMem:
          myData = h5f[hdf5var][:,firstElement:lastElement]
       else:
-         myData = h5f[hdf5var][idt,firstElement:lastElement]
+         if h5f[hdf5var].ndim==2:
+            myData = h5f[hdf5var][idt,firstElement:lastElement]
+         else:
+            myData = h5f[hdf5var][firstElement:lastElement]
       h5f.close()
    else:
       filename = dataLocation
