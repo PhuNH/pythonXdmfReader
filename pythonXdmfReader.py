@@ -38,9 +38,9 @@
 #
 
 #Author: Thomas Ulrich
-#Date: 12.10.17
+#Date: 09.11.18
 #aim: 
-# python reader for SeisSol xdmf output (posix or hdf5)
+# python reader for SeisSol xdmf output (posix or hdf5) and hdf5 mesh
 
 
 import numpy as np
@@ -49,6 +49,7 @@ import os
 import lxml.etree as ET
 
 def ReadGeometry(xdmfFilename):
+   #Read coordinates array of vertices
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
    path = os.path.dirname(xdmfFilename) 
@@ -79,6 +80,7 @@ def ReadGeometry(xdmfFilename):
    return xyz
 
 def ReadConnect(xdmfFilename):
+   #Read the connectivity matrice defining the cells
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
    path = os.path.dirname(xdmfFilename) 
@@ -128,6 +130,7 @@ def GetDataLocationAndPrecision(xdmfFilename, dataName):
    raise NameError('%s not found in dataset' %(dataName))
 
 def ReadNdt(xdmfFilename):
+   #read number of time steps in the file
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
    ndt = 0
@@ -140,6 +143,7 @@ def ReadNdt(xdmfFilename):
       return ndt
 
 def ReadNElements(xdmfFilename):
+   #read number of cell elements of the mesh
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
    for Property in root.findall('Domain/Grid/Grid/Topology'):
@@ -147,7 +151,7 @@ def ReadNElements(xdmfFilename):
    raise NameError('nElements could not be determined')
 
 def ReadTimeStep(xdmfFilename):
-   #reading the time step in the xdmf file
+   #reading the time step (dt) in the xdmf file
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
    i=0
@@ -163,6 +167,7 @@ def ReadTimeStep(xdmfFilename):
 
 
 def Read1dData(xdmfFilename, dataName, nElements, isInt=False):
+   #Read 1 dimension array (used by ReadPartition)
    path = os.path.dirname(xdmfFilename) 
    if path != '':
       path = path + '/'
@@ -191,11 +196,15 @@ def Read1dData(xdmfFilename, dataName, nElements, isInt=False):
    return [myData,data_prec]
 
 def ReadPartition(xdmfFilename, nElements):
+   # Read partition array
    partition, partition_prec = Read1dData(xdmfFilename, 'partition', nElements, isInt=True)
    return partition
 
 def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElement=-1):
-
+   # Load a data array named 'dataName' (e.g. SRs)
+   # if oneDtMem=True, only the time step idt is loaded
+   # else all time steps are loaded
+   # a partial load of the data array can be done using custom firstElement and nElements variables
    if firstElement==-1:
       firstElement=0
       partialLoading=False
