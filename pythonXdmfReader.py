@@ -240,7 +240,7 @@ def LoadData(xdmfFilename, dataName, nElements, idt=0, oneDtMem=False, firstElem
       if not oneDtMem:
          if not partialLoading:
            myData = np.fromfile(fid, dtype=data_type)
-           ndt = np.shape(myData)[0]/MemDimension
+           ndt = np.shape(myData)[0]//MemDimension
            myData = myData.reshape((ndt, MemDimension))
            myData = myData[:,firstElement:lastElement]
          else:
