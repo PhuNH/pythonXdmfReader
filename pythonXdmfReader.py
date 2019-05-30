@@ -113,20 +113,27 @@ def ReadConnect(xdmfFilename):
    return connect
 
 def GetDataLocationAndPrecision(xdmfFilename, dataName):
+   def get(prop):
+      dataLocation = prop.text
+      data_prec = int(prop.get("Precision"))
+      dims = prop.get("Dimensions").split()
+      if len(dims)==1:
+         MemDimension = int(prop.get("Dimensions").split()[0])
+      else:
+         MemDimension = int(prop.get("Dimensions").split()[1])
+      return [dataLocation,data_prec,MemDimension]
+   
    tree = ET.parse(xdmfFilename)
    root = tree.getroot()
    for Property in root.findall('.//Attribute'):
       if Property.get("Name")==dataName:
          for prop in Property.findall('.//DataItem'):
             if prop.get("Format") in ['HDF','Binary']:
-               dataLocation = prop.text
-               data_prec = int(prop.get("Precision"))
-               dims = prop.get("Dimensions").split()
-               if len(dims)==1:
-                  MemDimension = int(prop.get("Dimensions").split()[0])
-               else:
-                  MemDimension = int(prop.get("Dimensions").split()[1])
-               return [dataLocation,data_prec,MemDimension]
+               return get(prop)
+            path = prop.get("Reference")
+            if path is not None:
+               ref = tree.xpath(path)[0]
+               return get(ref)
    raise NameError('%s not found in dataset' %(dataName))
 
 def ReadNdt(xdmfFilename):
